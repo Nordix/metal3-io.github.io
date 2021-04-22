@@ -22,6 +22,7 @@ permalink: /try-it.html
 
 <!-- /TOC -->
 <hr>
+
 ## 1. Environment-Setup
 
 > info "Naming"
@@ -227,9 +228,9 @@ status:
 
 This section describes how to trigger provisioning of a cluster and hosts via
 `Machine` objects as part of the Cluster API integration. This uses Cluster API
-[v1alpha3](https://github.com/kubernetes-sigs/cluster-api/tree/v0.3.0) and
+[v1alpha4](https://github.com/kubernetes-sigs/cluster-api/tree/v0.3.0) and
 assumes that metal3-dev-env is deployed with the environment variable
-**CAPM3_VERSION** set to **v1alpha3**. The v1alpha3 deployment can be done with
+**CAPM3_VERSION** set to **v1alpha4**. This is the default behaviour. The v1alpha4 deployment can be done with
 Ubuntu 18.04 or Centos 8 target host images. Please make sure to meet [resource requirements](#11-prerequisites) for successfull deployment:
 
 The following scripts can be used to provision a cluster, controlplane node and worker node.
