@@ -113,7 +113,7 @@ represented by `BareMetalHost` objects in our management cluster. The yaml
 defition file used to create these host objects is in `bmhosts_crs.yaml`.
 
 ```sh
-$ kubectl get baremetalhosts -n metal3
+$ kubectl get baremetalhosts -n metal3 -o wide
 NAME     STATUS   PROVISIONING STATUS   CONSUMER   BMC                         HARDWARE PROFILE   ONLINE   ERROR
 node-0   OK       ready                            ipmi://192.168.111.1:6230   unknown            true
 node-1   OK       ready                            ipmi://192.168.111.1:6231   unknown            true
@@ -378,7 +378,7 @@ The `BareMetalHost` will go through the provisioning process, and will
 eventually reboot into the operating system we wrote to disk.
 
 ```sh
-$ kubectl get baremetalhost node-0 -n metal3
+$ kubectl get baremetalhost node-0 -n metal3 -o wide
 NAME       STATUS   PROVISIONING STATUS   MACHINE   BMC                         HARDWARE PROFILE   ONLINE   ERROR
 node-0     OK       provisioned                     ipmi://192.168.111.1:6230   unknown            true
 ```
@@ -410,7 +410,7 @@ $ ./deprovision_host.sh node-0
 You will then see the host go into a `deprovisioning` status:
 
 ```sh
-$ kubectl get baremetalhost node-0 -n metal3
+$ kubectl get baremetalhost node-0 -n metal3 -o wide
 NAME       STATUS   PROVISIONING STATUS   MACHINE   BMC                         HARDWARE PROFILE   ONLINE   ERROR
 node-0     OK       deprovisioning                  ipmi://192.168.111.1:6230   unknown            true
 ```
