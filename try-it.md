@@ -7,23 +7,22 @@ permalink: /try-it.html
 <!-- TOC depthFrom:2 insertAnchor:false orderedList:false updateOnSave:true withLinks:true -->
 
 - [1. Environment Setup](#1-environment-setup)
-    - [1.1. Prerequisites](#11-prerequisites)
-    - [1.2. Setup](#12-setup)
-    - [1.3. Using Custom Image](#13-using-custom-image)
+   - [1.1. Prerequisites](#11-prerequisites)
+   - [1.2. Setup](#12-setup)
+   - [1.3. Using Custom Image](#13-using-custom-image)
 - [2. Working with Environment](#2-working-with-environment)
-    - [2.1. BareMetalHosts](#21-baremetalhosts)
-    - [2.2. Provision Cluster and Machines](#22-provision-cluster-and-machines)
-    - [2.3. Deprovision Cluster and Machines](#23-deprovision-cluster-and-machines)
-    - [2.4. Image configuration (Centos 7 target hosts only)](#24-image-configuration-centos-7-target-hosts-only)
-    - [2.5. Directly Provision BareMetalHost](#25-directly-provision-baremetalhost)
-    - [2.6. Running Custom Baremetal-Operator](#26-running-custom-baremetal-operator)
-    - [2.7. Running Custom Cluster API Provider Metal3](#27-running-custom-cluster-api-provider-metal3)
-    - [2.8. Accessing Ironic API](#28-accessing-ironic-api)
+   - [2.1. BareMetalHosts](#21-baremetalhosts)
+   - [2.2. Provision Cluster and Machines](#22-provision-cluster-and-machines)
+   - [2.3. Deprovision Cluster and Machines](#23-deprovision-cluster-and-machines)
+   - [2.4. Directly Provision BareMetalHost](#24-directly-provision-baremetalhost)
+   - [2.5. Running Custom Baremetal-Operator](#25-running-custom-baremetal-operator)
+   - [2.6. Running Custom Cluster API Provider Metal3](#26-running-custom-cluster-api-provider-metal3)
+   - [2.7. Accessing Ironic API](#29-accessing-ironic-api)
 
 <!-- /TOC -->
 <hr>
 
-## 1. Environment-Setup
+## 1. Environment Setup
 
 > info "Naming"
 > For the v1alpha3 release, the Cluster API provider for Metal3 was renamed from
@@ -338,32 +337,7 @@ $ kubectl get cluster -n metal3
 NAME    PHASE
 test1   deprovisioning
 ```
-
-### 2.4. Image Configuration (Centos 7 target hosts only)
-
-If you want to deploy Ubuntu hosts, please skip this section.
-
-As shown in the [prerequisites](#11-prerequisites) section, the preferred OS image for CentOS is version 8. Actually, for both the system where the metal3-dev-env environment is configured and the target cluster nodes.
-
-Wheter you still want to deploy Centos 7 for the target hosts, the following variables needs to be modified:
-
-```
-IMAGE_NAME_CENTOS="centos-updated.qcow2"
-IMAGE_LOCATION_CENTOS="http://artifactory.nordix.org/artifactory/airship/images/centos.qcow2"
-IMAGE_OS=Centos
-```
-
-Additionally, you can let the Ansible `provision_controlplane.sh` and `provision_worker.sh` download the image automatically following the variables listed above or download the properly configured CentOS 7 image from the following location into the `IRONIC_IMAGE_DIR`:
-
-```sh
-curl -LO http://artifactory.nordix.org/artifactory/airship/images/centos.qcow2
-mv centos.qcow2 /opt/metal3-dev-env/ironic/html/images/centos-updated.qcow2
-md5sum /opt/metal3-dev-env/ironic/html/images/centos-updated.qcow2 | \
-awk '{print $1}' > \
-/opt/metal3-dev-env/ironic/html/images/centos-updated.qcow2.md5sum
-```
-
-### 2.5. Directly Provision BareMetalHost
+### 2.4. Directly Provision BareMetalHost
 
 It’s also possible to provision via the `BareMetalHost` interface directly
 without using the Cluster API integration.
@@ -416,7 +390,7 @@ NAME       STATUS   PROVISIONING STATUS   MACHINE   BMC                         
 node-0     OK       deprovisioning                  ipmi://192.168.111.1:6230   unknown            true
 ```
 
-### 2.6. Running Custom Baremetal-Operator
+### 2.5. Running Custom Baremetal-Operator
 
 The `baremetal-operator` comes up running in the cluster by default, using an
 image built from the [metal3-io/baremetal-operator](https://github.com/metal3-io/baremetal-operator) repository. If you’d like to test changes to the
@@ -438,7 +412,7 @@ cd ~/go/src/github.com/metal3-io/baremetal-operator
 make run
 ```
 
-### 2.7. Running Custom Cluster API Provider Metal3
+### 2.6. Running Custom Cluster API Provider Metal3
 
 There are two Cluster API related managers running in the cluster. One
 includes set of generic controllers, and the other includes a custom Machine
@@ -457,7 +431,7 @@ cd ~/go/src/github.com/metal3-io/cluster-api-provider-metal3
 make run
 ```
 
-### 2.8. Accessing Ironic API
+### 2.7. Accessing Ironic API
 
 Sometimes you may want to look directly at Ironic to debug something.
 The metal3-dev-env repository contains a clouds.yaml file with
