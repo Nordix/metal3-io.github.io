@@ -10,6 +10,7 @@ permalink: /try-it.html
   - [1.1. Prerequisites](#11-prerequisites)
   - [1.2. Setup](#12-setup)
   - [1.3. Using Custom Image](#13-using-custom-image)
+  - [1.4. Setting environment variables](#14-setting-environment-variables)
 - [2. Working with Environment](#2-working-with-environment)
   - [2.1. BareMetalHosts](#21-baremetalhosts)
   - [2.2. Provision Cluster and Machines](#22-provision-cluster-and-machines)
@@ -78,13 +79,6 @@ $ make clean
 > When redeploying metal³-dev-env with a different release version of CAPM3, you
 > must set the `FORCE_REPO_UPDATE` variable in `config_${user}.sh` to _true_.
 
-### 1.3. Using Custom Image
-
-Whether you want to run target cluster Nodes with your own image, you can override the three following variables: `IMAGE_NAME`,
-`IMAGE_LOCATION`, `IMAGE_USERNAME`. If the requested image with name `IMAGE_NAME` does not
-exist in the `IRONIC_IMAGE_DIR` (/opt/metal3-dev-env/ironic/html/images) folder, then it will be automatically
-downloaded from the `IMAGE_LOCATION` value configured.
-
 > warning "Warning"
 > If you see this error during the installation:
 >
@@ -94,6 +88,22 @@ downloaded from the `IMAGE_LOCATION` value configured.
 > ```
 >
 > You may need to log out then login again, and run `make clean` and `make` again.
+
+### 1.3. Using Custom Image
+
+Whether you want to run target cluster Nodes with your own image, you can override the three following variables: `IMAGE_NAME`,
+`IMAGE_LOCATION`, `IMAGE_USERNAME`. If the requested image with name `IMAGE_NAME` does not
+exist in the `IRONIC_IMAGE_DIR` (/opt/metal3-dev-env/ironic/html/images) folder, then it will be automatically
+downloaded from the `IMAGE_LOCATION` value configured.
+
+### 1.4. Setting environment variables
+
+To set environment variables persistently, export them from the configuration file used by metal³-dev-env scripts:
+
+```bash
+$ cp config_example.sh config_$(whoami).sh
+$ vim config_$(whoami).sh
+```
 
 ## 2. Working with Environment
 
@@ -113,7 +123,7 @@ $ sudo virsh list
 
 Each of the VMs (aside from the `minikube` management cluster VM) are
 represented by `BareMetalHost` objects in our management cluster. The yaml
-defition file used to create these host objects is in `bmhosts_crs.yaml`.
+definition file used to create these host objects is in `bmhosts_crs.yaml`.
 
 ```sh
 $ kubectl get baremetalhosts -n metal3 -o wide
@@ -233,7 +243,7 @@ This section describes how to trigger provisioning of a cluster and hosts via
 [v1alpha4](https://github.com/kubernetes-sigs/cluster-api/tree/v0.3.0) and
 assumes that metal3-dev-env is deployed with the environment variable
 **CAPM3_VERSION** set to **v1alpha4**. This is the default behaviour. The v1alpha4 deployment can be done with
-Ubuntu 18.04 or Centos 8 target host images. Please make sure to meet [resource requirements](#11-prerequisites) for successfull deployment:
+Ubuntu 18.04 or Centos 8 target host images. Please make sure to meet [resource requirements](#11-prerequisites) for successful deployment:
 
 The following scripts can be used to provision a cluster, controlplane node and worker node.
 
