@@ -258,7 +258,9 @@ from v1alpha3 onwards it is Cluster API provider Metal3.</p>
   <li>System with CentOS 8 or Ubuntu 18.04</li>
   <li>Bare metal preferred, as we will be creating VMs to emulate bare metal hosts</li>
   <li>Run as a user with passwordless sudo access</li>
-  <li>Minimum resource requirements for the host machine: 4C CPUs, 16 GB RAM memory.</li>
+  <li>Minimum resource requirements for the host machine: 4C CPUs, 16 GB RAM memory, 80GB volumn</li>
+  <li>The host machine should have a floating IP</li>
+  <li>Required dependencies: make, kubelet, kubeadm, kubectl, go (version 1.17.5)</li>
 </ul>
 
 <h3 id="12-setup">1.2. Setup</h3>
@@ -391,9 +393,9 @@ represented by <code class="language-plaintext highlighter-rouge">BareMetalHost<
 definition file used to create these host objects is in <code class="language-plaintext highlighter-rouge">bmhosts_crs.yaml</code>.</p>
 
 <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl get baremetalhosts <span class="nt">-n</span> metal3 <span class="nt">-o</span> wide
-NAME     STATUS   STATE   CONSUMER   BMC                                                                                         HARDWARE_PROFILE   ONLINE   ERROR
-node-0   OK       ready              ipmi://192.168.111.1:6230                                                                   unknown            <span class="nb">true
-</span>node-1   OK       ready              redfish+http://192.168.111.1:8000/redfish/v1/Systems/a82b2800-e37a-4605-9ed2-ca5ee8bb7857   unknown            <span class="nb">true</span>
+NAME     STATUS   STATE       CONSUMER   BMC                                                                                         HARDWARE_PROFILE   ONLINE   ERROR   AGE
+node-0   OK       available              ipmi://192.168.111.1:6230                                                                   unknown            <span class="nb">true             58m</span>
+node-1   OK       available              redfish+http://192.168.111.1:8000/redfish/v1/Systems/492fcbab-4a79-40d7-8fea-a7835a05ef4a   unknown            <span class="nb">true             58m</span>
 </code></pre></div></div>
 
 <p>You can also look at the details of a host, including the hardware information
@@ -515,9 +517,9 @@ spec:
 
 <p>This section describes how to trigger provisioning of a cluster and hosts via
 <code class="language-plaintext highlighter-rouge">Machine</code> objects as part of the Cluster API integration. This uses Cluster API
-<a href="https://github.com/kubernetes-sigs/cluster-api/tree/v0.3.0">v1alpha4</a> and
+<a href="https://github.com/kubernetes-sigs/cluster-api/tree/v0.3.0">v1beta1</a> and
 assumes that metal3-dev-env is deployed with the environment variable
-<strong>CAPM3_VERSION</strong> set to <strong>v1alpha4</strong>. This is the default behavior. The v1alpha4 deployment can be done with
+<strong>CAPM3_VERSION</strong> set to <strong>v1beta1</strong>. This is the default behavior. The v1beta1 deployment can be done with
 Ubuntu 18.04 or Centos 8 target host images. Please make sure to meet <a href="#11-prerequisites">resource requirements</a> for successful deployment:</p>
 
 <p>The following scripts can be used to provision a cluster, controlplane node and worker node.</p>
@@ -530,32 +532,24 @@ Ubuntu 18.04 or Centos 8 target host images. Please make sure to meet <a href="#
 <p>At this point, the <code class="language-plaintext highlighter-rouge">Machine</code> actuator will respond and try to claim a
 <code class="language-plaintext highlighter-rouge">BareMetalHost</code> for this <code class="language-plaintext highlighter-rouge">Metal3Machine</code>. You can check the logs of the actuator.</p>
 
-<p>First check the names of the pods running in the <code class="language-plaintext highlighter-rouge">capm3-system</code> namespace and the output should be something similar
+<p>First check the names of the pods running in the <code class="language-plaintext highlighter-rouge">baremetal-operator-system</code> namespace and the output should be something similar
 to this:</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl <span class="nt">-n</span> capm3-system get pods
-NAME                                                           READY   STATUS    RESTARTS   AGE
-capm3-baremetal-operator-controller-manager-7fd6769dc5-2krhm   2/2     Running   0          10m
-capm3-controller-manager-5d968ffd9d-8f6jz                      2/2     Running   0          10m
-capm3-ipam-controller-manager-6b77b87b46-nrrmt                 2/2     Running   0          10m
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl <span class="nt">-n</span> baremetal-operator-system get pods
+NAME                                                    READY   STATUS    RESTARTS   AGE
+baremetal-operator-controller-manager-5fd4fb6c8-c9prs   2/2     Running   0          71m
 </code></pre></div></div>
 
-<p>In order to get the logs of the actuator the logs of the capm3-controller-manager instance has to be queried with
+<p>In order to get the logs of the actuator the logs of the baremetal-operator-controller-manager instance has to be queried with
 the following command:</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl logs <span class="nt">-n</span> capm3-system pod/capm3-controller-manager-5d968ffd9d-8f6jz <span class="nt">-c</span> manager
-
-09:10:38.914458       controller-runtime/controller <span class="s2">"msg"</span><span class="o">=</span><span class="s2">"Starting Controller"</span>  <span class="s2">"controller"</span><span class="o">=</span><span class="s2">"metal3cluster"</span>
-09:10:38.926489       controller-runtime/controller <span class="s2">"msg"</span><span class="o">=</span><span class="s2">"Starting workers"</span>  <span class="s2">"controller"</span><span class="o">=</span><span class="s2">"metal3machine"</span> <span class="s2">"worker count"</span><span class="o">=</span>1
-10:54:16.943712       Host matched hostSelector <span class="k">for </span>Metal3Machine
-10:54:16.943772       2 hosts available <span class="k">while </span>choosing host <span class="k">for </span>bare metal machine
-10:54:16.944087       Associating machine with host
-10:54:17.516274       Finished creating machine
-10:54:17.518718       Provisioning BaremetalHost
-
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl logs <span class="nt">-n</span> baremetal-operator-system pod/baremetal-operator-controller-manager-5fd4fb6c8-c9prs <span class="nt">-c</span> manager
+...
+{"level":"info","ts":1642594214.3598707,<span class="s2">"logger":"controllers.BareMetalHost"</span>,"msg":"done","baremetalhost":"metal3/node-1", <span class="s2">"provisioningState":"provisioning"</span>,"requeue":true,"after":10}
+...
 </code></pre></div></div>
 
-<p>Keep in mind that the suffix hashes e.g. <code class="language-plaintext highlighter-rouge">5d968ffd9d-8f6jz</code> are automatically generated and change in case of a different
+<p>Keep in mind that the suffix hashes e.g. <code class="language-plaintext highlighter-rouge">5fd4fb6c8-c9prs</code> are automatically generated and change in case of a different
 deployment.</p>
 
 <p>If you look at the yaml representation of the <code class="language-plaintext highlighter-rouge">Metal3Machine</code> object, you will see a
@@ -584,9 +578,9 @@ see from its annotation which <code class="language-plaintext highlighter-rouge"
 provisioned and associated with a <code class="language-plaintext highlighter-rouge">Metal3Machines</code> by looking at the <code class="language-plaintext highlighter-rouge">CONSUMER</code> output column of the following command:</p>
 
 <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl get baremetalhosts <span class="nt">-n</span> metal3
-NAME     STATUS   STATE         CONSUMER                   BMC                                                                                         HARDWARE_PROFILE   ONLINE   ERROR
-node-0   OK       provisioned   test1-controlplane-ssd56   ipmi://192.168.111.1:6230                                                                   unknown            <span class="nb">true
-</span>node-1   OK       provisioned   test1-workers-gjcts        redfish+http://192.168.111.1:8000/redfish/v1/Systems/a1cd44ba-c6db-49ac-bb07-56d4fbc5380f   unknown            <span class="nb">true</span>
+NAME     STATE         CONSUMER                   ONLINE   ERROR   AGE
+node-0   provisioned   test1-controlplane-jjd9l   true             122m
+node-1   provisioned   test1-workers-bx4wp        true             122m
 </code></pre></div></div>
 
 <p>It is also possible to check that which <code class="language-plaintext highlighter-rouge">Metal3Machine</code> serves as infrastructure for the ClusterAPI <code class="language-plaintext highlighter-rouge">Machine</code>
@@ -595,27 +589,27 @@ objects.</p>
 <p>First list the <code class="language-plaintext highlighter-rouge">Machine</code> objects:</p>
 
 <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl get machine <span class="nt">-n</span> metal3
-NAME                     PROVIDERID                                      PHASE     VERSION
-test1-75678f6485-z928j   metal3://ee337588-be96-4d5b-95b9-b7375969debd   Running   v1.21.2
-test1-m77bn              metal3://d4848820-55fd-410a-b902-5b2122dd206c   Running   v1.21.2
+NAME                     CLUSTER   NODENAME                 PROVIDERID                                      PHASE     AGE   VERSION
+test1-6d8cc5965f-wvzms   test1     test1-6d8cc5965f-wvzms   metal3://7f51f14b-7701-436a-85ba-7dbc7315b3cb   Running   53m   v1.22.3
+test1-nphjx              test1     test1-nphjx              metal3://14fbcd25-4d09-4aca-9628-a789ba3e175c   Running   55m   v1.22.3
 </code></pre></div></div>
 
-<p>As a next step you can check what serves as the infrastructure backend for e.g. <code class="language-plaintext highlighter-rouge">test1-75678f6485-z928j</code> <code class="language-plaintext highlighter-rouge">Machine</code>
+<p>As a next step you can check what serves as the infrastructure backend for e.g. <code class="language-plaintext highlighter-rouge">test1-6d8cc5965f-wvzms</code> <code class="language-plaintext highlighter-rouge">Machine</code>
 object:</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl get machine test1-75678f6485-z928j <span class="nt">-n</span> metal3 <span class="nt">-o</span> yaml
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl get machine test1-6d8cc5965f-wvzms <span class="nt">-n</span> metal3 <span class="nt">-o</span> yaml
 ...
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: Metal3Machine
-    name: test1-workers-gjcts
+    name: test1-workers-bx4wp
     namespace: metal3
-    uid: 9adaec5f-f72b-4674-9f8f-1dc6c9039755
+    uid: 39362b32-ebb7-4117-9919-67510ceb177f
 ...
 </code></pre></div></div>
 
-<p>Based on the result of the query <code class="language-plaintext highlighter-rouge">test1-75678f6485-z928j</code> ClusterAPI <code class="language-plaintext highlighter-rouge">Machine</code> object is backed by
-<code class="language-plaintext highlighter-rouge">test1-workers-gjcts</code> <code class="language-plaintext highlighter-rouge">Metal3Machine</code> object.</p>
+<p>Based on the result of the query <code class="language-plaintext highlighter-rouge">test1-6d8cc5965f-wvzms</code> ClusterAPI <code class="language-plaintext highlighter-rouge">Machine</code> object is backed by
+<code class="language-plaintext highlighter-rouge">test1-workers-bx4wp</code> <code class="language-plaintext highlighter-rouge">Metal3Machine</code> object.</p>
 
 <p>You should be able to ssh into your host once provisioning is completed.
 The default username for both CentOS &amp; Ubuntu image is <code class="language-plaintext highlighter-rouge">metal3</code>.
@@ -635,9 +629,9 @@ master node - <code class="language-plaintext highlighter-rouge">192.168.111.100
 <span class="nv">$ </span>./scripts/deprovision/cluster.sh
 </code></pre></div></div>
 
-<p>Note that you can easily deprovision worker Nodes by decreasing the number of replicas in the <code class="language-plaintext highlighter-rouge">MachineDeployment</code> object created when executing the <code class="language-plaintext highlighter-rouge">provision_worker.sh</code> script:</p>
+<p>Note that you can easily deprovision worker Nodes by decreasing the number of replicas in the <code class="language-plaintext highlighter-rouge">MachineDeployment</code> object created when executing the <code class="language-plaintext highlighter-rouge">provision/worker.sh</code> script:</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl scale machinedeployment test1-md-0 <span class="nt">--replicas</span><span class="o">=</span>0
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl scale machinedeployment test1 -n metal3 <span class="nt">--replicas</span><span class="o">=</span>0
 </code></pre></div></div>
 
 <div class="premonition warning"><div class="fa fa-exclamation-circle"></div><div class="content"><p class="header">Warning</p><p>control-plane and cluster are very tied together. This means that you are not able to deprovision the control-plane of a cluster and then provision a new one within the same cluster. Therefore, in case you want to deprovision the control-plane you need to <strong>deprovision the cluster</strong> as well and provision both again.</p>
@@ -680,9 +674,9 @@ cluster.cluster.x-k8s.io <span class="s2">"test1"</span> deleted
 <p>Once the deletion has finished, you can see that the <code class="language-plaintext highlighter-rouge">BareMetalHosts</code> are offline  and <code class="language-plaintext highlighter-rouge">Cluster</code> object is not present anymore</p>
 
 <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl get baremetalhosts <span class="nt">-n</span> metal3
-NAME     STATUS   STATE   CONSUMER   BMC                                                                                         HARDWARE_PROFILE   ONLINE   ERROR
-node-0   OK       ready              ipmi://192.168.111.1:6230                                                                   unknown            <span class="nb">false
-</span>node-1   OK       ready              redfish+http://192.168.111.1:8000/redfish/v1/Systems/a1cd44ba-c6db-49ac-bb07-56d4fbc5380f   unknown            <span class="nb">false</span>
+NAME     STATE       CONSUMER   ONLINE   ERROR   AGE
+node-0   available              false            160m
+node-1   available              false            160m
 
 <span class="nv">$ </span>kubectl get cluster <span class="nt">-n</span> metal3
 No resources found <span class="k">in </span>metal3 namespace.
@@ -697,7 +691,7 @@ image built from the <a href="https://github.com/metal3-io/baremetal-operator">m
 <p>First, you must scale down the deployment of the <code class="language-plaintext highlighter-rouge">baremetal-operator</code> running
 in the cluster.</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code>kubectl scale deployment capm3-baremetal-operator-controller-manager <span class="nt">-n</span> metal3 <span class="nt">--replicas</span><span class="o">=</span>0
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code>kubectl scale deployment baremetal-operator-controller-manager <span class="nt">-n</span> baremetal-operator-system <span class="nt">--replicas</span><span class="o">=</span>0
 </code></pre></div></div>
 
 <p>To be able to run <code class="language-plaintext highlighter-rouge">baremetal-operator</code> locally, you need to install
@@ -716,13 +710,15 @@ controller for Metal3. If you want to try changes to
 <code class="language-plaintext highlighter-rouge">cluster-api-provider-metal3</code>, you want to shut down the custom Machine
 controller manager first.</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl scale deployment capm3-controller-manager <span class="nt">-n</span> capm3-system <span class="nt">--replicas</span><span class="o">=</span>0
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nv">$ </span>kubectl scale deployment baremetal-operator-controller-manager <span class="nt">-n</span> baremetal-operator-system <span class="nt">--replicas</span><span class="o">=</span>0
 </code></pre></div></div>
 
 <p>Then you can run the custom Machine controller manager out of your local git tree.</p>
 
 <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="nb">cd</span> ~/go/src/github.com/metal3-io/cluster-api-provider-metal3
-make run
+make generate
+make tilt-settings
+make tilt-up
 </code></pre></div></div>
 
 <h3 id="26-accessing-ironic-api">2.6. Accessing Ironic API</h3>
@@ -747,73 +743,77 @@ commands.</p>
 
 <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="o">[</span>notstack@metal3 metal3-dev-env]<span class="nv">$ </span><span class="nb">export </span><span class="nv">CONTAINER_RUNTIME</span><span class="o">=</span>docker
 <span class="o">[</span>notstack@metal3 metal3-dev-env]<span class="nv">$ </span>baremetal node list
-+--------------------------------------+--------+---------------+-------------+--------------------+-------------+
-| UUID                                 | Name   | Instance UUID | Power State | Provisioning State | Maintenance |
-+--------------------------------------+--------+---------------+-------------+--------------------+-------------+
-| 882cf206-d688-43fa-bf4c-3282fcb00b12 | node-0 | None          | None        | enroll             | False       |
-| ac257479-d6c6-47c1-a649-64a88e6ff312 | node-1 | None          | None        | enroll             | False       |
-+--------------------------------------+--------+---------------+-------------+--------------------+-------------+
++--------------------------------------+---------------+--------------------------------------+-------------+--------------------+-------------+
+| UUID                                 | Name          | Instance UUID                        | Power State | Provisioning State | Maintenance |
++--------------------------------------+---------------+--------------------------------------+-------------+--------------------+-------------+
+| b423ee9c-66d8-48dd-bd6f-656b93140504 | metal3~node-1 | 7f51f14b-7701-436a-85ba-7dbc7315b3cb | power off   | available          | False       |
+| 882533c5-2f14-49f6-aa44-517e1e404fd8 | metal3~node-0 | 14fbcd25-4d09-4aca-9628-a789ba3e175c | power off   | available          | False       |
++--------------------------------------+---------------+--------------------------------------+-------------+--------------------+-------------+
 </code></pre></div></div>
 
 <p>To view a particular node’s details, run the below command. The
 <code class="language-plaintext highlighter-rouge">last_error</code>, <code class="language-plaintext highlighter-rouge">maintenance_reason</code>, and <code class="language-plaintext highlighter-rouge">provisioning_state</code> fields are
 useful for troubleshooting to find out why a node did not deploy.</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="o">[</span>notstack@metal3 metal3-dev-env]<span class="nv">$ </span>baremetal node show 882cf206-d688-43fa-bf4c-3282fcb00b12
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="o">[</span>notstack@metal3 metal3-dev-env]<span class="nv">$ </span>baremetal node show b423ee9c-66d8-48dd-bd6f-656b93140504
 +------------------------+------------------------------------------------------------+
 | Field                  | Value                                                      |
 +------------------------+------------------------------------------------------------+
 | allocation_uuid        | None                                                       |
-| automated_clean        | None                                                       |
-| bios_interface         | no-bios                                                    |
+| automated_clean        | True                                                       |
+| bios_interface         | redfish                                                    |
 | boot_interface         | ipxe                                                       |
 | chassis_uuid           | None                                                       |
 | clean_step             | <span class="o">{}</span>                                                         |
-| conductor              | localhost.localdomain                                      |
+| conductor              | 172.22.0.2                                                 |
 | conductor_group        |                                                            |
 | console_enabled        | False                                                      |
 | console_interface      | no-console                                                 |
-| created_at             | 2019-10-07T19:37:36+00:00                                  |
+| created_at             | 2022-01-19T10:56:06+00:00                                  |
 | deploy_interface       | direct                                                     |
 | deploy_step            | <span class="o">{}</span>                                                         |
 | description            | None                                                       |
-| driver                 | ipmi                                                       |
-| driver_info            | <span class="o">{</span>u<span class="s1">'ipmi_port'</span>: u<span class="s1">'6230'</span>, u<span class="s1">'ipmi_username'</span>: u<span class="s1">'admin'</span>, u<span class="s1">'deploy_kernel'</span>: u<span class="s1">'http://172.22.0.2/images/ironic-python-agent.kernel'</span>, u<span class="s1">'ipmi_address'</span>: u<span class="s1">'192.168.111.1'</span>, u<span class="s1">'deploy_ramdisk'</span>: u<span class="s1">'http://172.22.0.2/images/ironic-python-agent.initramfs'</span>, u<span class="s1">'ipmi_password'</span>: u<span class="s1">'******'</span><span class="o">}</span> |
-| driver_internal_info   | <span class="o">{</span>u<span class="s1">'agent_enable_ata_secure_erase'</span>: True, u<span class="s1">'agent_erase_devices_iterations'</span>: 1, u<span class="s1">'agent_erase_devices_zeroize'</span>: True, u<span class="s1">'disk_erasure_concurrency'</span>: 1, u<span class="s1">'agent_continue_if_ata_erase_failed'</span>: False<span class="o">}</span>                                                                          |
+| driver                 | redfish                                                    |
+| driver_info            | <span class="o">{</span>u<span class="s1">'deploy_kernel'</span>: u<span class="s1">'http://172.22.0.2:6180/images/ironic-python-agent.kernel'</span>, u<span class="s1">'deploy_ramdisk'</span>: u<span class="s1">'http://172.22.0.2:6180/images/ironic-python-agent.initramfs'</span>, u<span class="s1">'redfish_address'</span>: u<span class="s1">'http://192.168.111.1:8000'</span>, u<span class="s1">'redfish_password'</span>: u<span class="s1">'******'</span>, u<span class="s1">'redfish_system_id'</span>: u<span class="s1">'/redfish/v1/Systems/492fcbab-4a79-40d7-8fea-a7835a05ef4a'</span>, u<span class="s1">'redfish_username'</span>: u<span class="s1">'admin'</span>, u<span class="s1">'force_persistent_boot_device'</span>: u<span class="s1">'Default'</span><span class="o">}</span> |
+| driver_internal_info   | <span class="o">{</span>u<span class="s1">'last_power_state_change'</span>: u<span class="s1">'2022-01-19T13:04:01.981882'</span>, u<span class="s1">'agent_version'</span>: u<span class="s1">'8.3.1.dev2'</span>, u<span class="s1">'agent_last_heartbeat'</span>: u<span class="s1">'2022-01-19T13:03:51.874842'</span>, u<span class="s1">'clean_steps'</span>: None, u<span class="s1">'agent_erase_devices_iterations'</span>: 1, u<span class="s1">'agent_erase_devices_zeroize'</span>: True, u<span class="s1">'agent_continue_if_secure_erase_failed'</span>: False, u<span class="s1">'agent_continue_if_ata_erase_failed'</span>: False, u<span class="s1">'agent_enable_nvme_secure_erase'</span>: True, u<span class="s1">'disk_erasure_concurrency'</span>: 1, u<span class="s1">'agent_erase_skip_read_only'</span>: False, u<span class="s1">'hardware_manager_version'</span>: <span class="o">{</span>u<span class="s1">'generic_hardware_manager'</span>: u<span class="s1">'1.1'</span><span class="o">}</span>, u<span class="s1">'agent_cached_clean_steps_refreshed'</span>: u<span class="s1">'2022-01-19 13:03:47.558697'</span>, u<span class="s1">'deploy_steps'</span>: None, u<span class="s1">'agent_cached_deploy_steps_refreshed'</span>: u<span class="s1">'2022-01-19 12:09:34.731244'</span><span class="o">}</span> |
 | extra                  | <span class="o">{}</span>                                                         |
-| fault                  | clean failure                                              |
+| fault                  | None                                                       |
 | inspect_interface      | inspector                                                  |
 | inspection_finished_at | None                                                       |
-| inspection_started_at  | None                                                       |
-| instance_info          | <span class="o">{}</span>                                                         |
+| inspection_started_at  | 2022-01-19T10:56:17+00:00                                  |
+| instance_info          | <span class="o">{</span>u<span class="s1">'capabilities'</span>: <span class="o">{}</span>, u<span class="s1">'image_source'</span>: u<span class="s1">'http://172.22.0.1/images/CENTOS_8_NODE_IMAGE_K8S_v1.22.3-raw.img'</span>, u<span class="s1">'image_os_hash_algo'</span>: u<span class="s1">'md5'</span>, u<span class="s1">'image_os_hash_value'</span>: u<span class="s1">'http://172.22.0.1/images/CENTOS_8_NODE_IMAGE_K8S_v1.22.3-raw.img.md5sum</span>', u<span class="s1">'image_checksum'</span>: u<span class="s1">'http://172.22.0.1/images/CENTOS_8_NODE_IMAGE_K8S_v1.22.3-raw.img.md5sum'</span>, u<span class="s1">'image_disk_format'</span>: u<span class="s1">'raw'</span><span class="o">}</span> |
 | instance_uuid          | None                                                       |
 | last_error             | None                                                       |
-| maintenance            | True                                                       |
-| maintenance_reason     | Timeout reached <span class="k">while </span>cleaning the node. Please check <span class="k">if </span>the ramdisk responsible <span class="k">for </span>the cleaning is running on the node. Failed on step <span class="o">{}</span><span class="nb">.</span>                                                                                                                                |
-| management_interface   | ipmitool                                                   |
-| name                   | master-0                                                   |
+| lessee                 | None                                                       |
+| maintenance            | False                                                      |
+| maintenance_reason     | None                                                       |
+| management_interface   | redfish                                                    |
+| name                   | metal3~node-1                                              |
+| network_data           | <span class="o">{}</span>                                                         |
 | network_interface      | noop                                                       |
 | owner                  | None                                                       |
-| power_interface        | ipmitool                                                   |
-| power_state            | power on                                                   |
-| properties             | <span class="o">{</span>u<span class="s1">'cpu_arch'</span>: u<span class="s1">'x86_64'</span>, u<span class="s1">'root_device'</span>: <span class="o">{</span>u<span class="s1">'name'</span>: u<span class="s1">'/dev/sda'</span><span class="o">}</span>, u<span class="s1">'local_gb'</span>: u<span class="s1">'50'</span><span class="o">}</span>                                                                                                                                                                                        |
+| power_interface        | redfish                                                    |
+| power_state            | power off                                                  |
+| properties             | <span class="o">{</span>u<span class="s1">'capabilities'</span>: u<span class="s1">'cpu_vt:true,cpu_aes:true,cpu_hugepages:true,boot_mode:bios'</span>, u<span class="s1">'vendor'</span>: u<span class="s1">'Sushy Emulator'</span>, u<span class="s1">'local_gb'</span>: u<span class="s1">'50'</span>, u<span class="s1">'cpus'</span>: u<span class="s1">'2'</span>, u<span class="s1">'cpu_arch'</span>: u<span class="s1">'x86_64'</span>, u<span class="s1">'memory_mb'</span>: u<span class="s1">'4096'</span>, u<span class="s1">'root_device'</span>: <span class="o">{</span>u<span class="s1">'name'</span>: u<span class="s1">'s== /dev/sda'</span><span class="o">}</span><span class="o">}</span>                                                                                                                                                                                        |
 | protected              | False                                                      |
 | protected_reason       | None                                                       |
-| provision_state        | clean <span class="nb">wait</span>                                                 |
-| provision_updated_at   | 2019-10-07T20:09:13+00:00                                  |
+| provision_state        | <span class="nb">available</span>                                                  |
+| provision_updated_at   | 2022-01-19T13:03:52+00:00                                  |
 | raid_config            | <span class="o">{}</span>                                                         |
 | raid_interface         | no-raid                                                    |
 | rescue_interface       | no-rescue                                                  |
 | reservation            | None                                                       |
-| resource_class         | baremetal                                                  |
+| resource_class         | None                                                       |
+| retired                | False                                                      |
+| retired_reason         | None                                                       |
 | storage_interface      | noop                                                       |
 | target_power_state     | None                                                       |
-| target_provision_state | available                                                  |
+| target_provision_state | None                                                       |
 | target_raid_config     | <span class="o">{}</span>                                                         |
 | traits                 | <span class="o">[]</span>                                                         |
-| updated_at             | 2019-10-07T20:09:13+00:00                                  |
-| uuid                   | 882cf206-d688-43fa-bf4c-3282fcb00b12                       |
-| vendor_interface       | ipmitool                                                   |
+| updated_at             | 2022-01-19T13:04:03+00:00                                  |
+| uuid                   | b423ee9c-66d8-48dd-bd6f-656b93140504                       |
+| vendor_interface       | redfish                                                    |
 +-------------------------------------------------------------------------------------+
 </code></pre></div></div>
 
