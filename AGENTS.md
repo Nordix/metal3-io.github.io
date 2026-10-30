@@ -1,81 +1,74 @@
-# Metal3 Website - AI Agent Instructions
+# Metal3 Website
 
-Instructions for AI coding agents. For content guidelines, see [GUIDELINES.md](GUIDELINES.md).
+Source of <https://metal3.io>, a Jekyll site built with the `github-pages`
+gem and served by GitHub Pages. Content rules:
+[GUIDELINES.md](GUIDELINES.md). Contribution rules: the
+[Metal3 community guide](https://github.com/metal3-io/community/blob/main/CONTRIBUTING.md).
 
-## Overview
+This file holds only what you cannot cheaply infer from the code. Where it
+disagrees with the code or the Makefile, trust those and report the
+mismatch.
 
-Public-facing website for Metal3 at <https://metal3.io>. Built with
-Jekyll static site generator, hosted on GitHub Pages.
+## AI-assisted contributions
 
-## Repository Structure
+Metal3 follows the CNCF and
+[Linux Foundation generative AI policy](https://www.linuxfoundation.org/legal/generative-ai).
 
-| Directory | Purpose |
-|-----------|---------|
-| `_posts/` | Blog posts (dated markdown files) |
-| `_layouts/` | Jekyll page templates |
-| `_includes/` | Reusable HTML components |
-| `_faqs/` | FAQ entries |
-| `assets/` | Images, CSS, JS |
-| `hack/` | CI scripts (markdownlint, spellcheck, shellcheck) |
+- AI is a tool. The human who opens a PR is its author and is responsible
+  for every line of it, including licensing and third-party content.
+- Review is a conversation between humans. A PR where an agent or bot
+  answers reviewers will be closed. Agents may draft changes; the
+  contributor reads them, understands them, and replies personally.
 
-## Testing Standards
+- Keep changes surgical. The smallest complete change that solves the
+  stated problem wins. Every added file, function, flag, dependency or
+  test helper must trace to that problem; anything that does not is
+  bloat and gets removed. Prefer reusing existing code over new code.
+  Report unrelated findings instead of fixing them in the same PR.
 
-CI uses GitHub Actions. Run locally before PRs:
+## Repository map
 
-| Command | Purpose |
-|---------|---------|
-| `make lint` | Run all linters |
-| `make serve` | Serve locally on port 4000 |
+- PRs target the `source` branch. `master` holds the built site. It is
+  generated and pushed by `.github/workflows/jekyll.yml` on every push to
+  `source` and nightly. Never edit `master` or open PRs against it.
+- Blog posts: `_posts/YYYY-MM-DD-title.md`. Copy the front matter from a
+  recent post. FAQ entries: `_faqs/`. Pages: the root `*.html` files.
+  Templates: `_layouts/`, `_includes/`, `_sass/`.
+- Post images go in `assets/<post file name without .md>/` and are
+  referenced as `/assets/<that dir>/<file>`.
 
-## Pre-commit Hooks
+## Testing
 
-This repository uses [pre-commit](https://pre-commit.com/) for automated checks.
-Config in `.pre-commit-config.yaml`.
+- `make lint` runs every `hack/` check in a container (`CONTAINER_RUNTIME`,
+  default `podman`). CI jobs:
+  [Prow](https://github.com/metal3-io/project-infra/blob/main/prow/config/jobs/metal3-io/metal3-io.github.io.yaml)
+  and `.github/workflows/`. The PR link check (lychee) runs only in CI.
+- New technical terms go in `.cspell-config.json`. Links that are valid
+  but fail checking go in `.lycheeignore`.
+- Before finishing, run `make lint`. All checks must pass.
+- `make serve` previews the site on `HOST_PORT` (default 4000), but it
+  needs a TTY and runs until stopped. Leave previewing to the user.
+- `_site/` is local build output and is gitignored.
 
-| Command | Purpose |
-|---------|---------|
-| `./hack/pre-commit.sh` | Run pre-commit in container |
-| `pre-commit install` | Install hooks locally |
-| `pre-commit run --all-files` | Run all hooks manually |
+## Invariants
 
-Hooks include: prettier (CSS/JS/JSON), black (Python), trailing whitespace,
-YAML/JSON validation, and merge conflict detection.
+These apply to writing and to reviewing changes.
 
-## Code Conventions
+- **Published URLs.** Post URLs come from the file name
+  (`permalink` in `_config.yml`). Never rename or re-date a published
+  post. If you must, add `redirect_from` to its front matter
+  (`jekyll-redirect-from` is enabled).
+- **Images.** Keep them small. The pre-commit `check-added-large-files`
+  hook rejects files over 500 KB.
+- **Security.** Do not add third-party scripts, trackers or embeds
+  without maintainer agreement. No secrets in content or workflows.
+  Keep workflow `permissions` minimal. `jekyll.yml` is the only workflow
+  that needs `contents: write`.
+- **Pinning.** Pin new external references: GitHub Actions by commit SHA,
+  container images by digest, external scripts by an SRI `integrity`
+  hash.
 
-- **Markdown**: Config in `.markdownlint-cli2.yaml`
-- **Spelling**: Custom dictionary in `.cspell-config.json`
-- **Links**: Checked by lychee (`.lycheeignore` for exceptions)
+## External references
 
-## Adding Content
-
-**New blog post:** Create `_posts/YYYY-MM-DD-title.md` with frontmatter:
-
-```yaml
----
-layout: post
-title: "Post Title"
-date: YYYY-MM-DD
-author: "Your Name"
----
-```
-
-## Code Review Guidelines
-
-When reviewing pull requests:
-
-1. **Visual review** - Preview locally with `make serve`
-1. **Spelling** - Add technical terms to `.cspell-config.json`
-1. **Links** - No broken links
-1. **Images** - Place in `assets/images/POST_TITLE/`
-
-## AI Agent Guidelines
-
-1. Run `make lint` before committing
-1. Update `.cspell-config.json` for new technical terms
-1. Follow [GUIDELINES.md](GUIDELINES.md) for content style
-
-## Related Documentation
-
-- [Metal3 Book](https://book.metal3.io)
+- [Metal3 Book](https://book.metal3.io/)
 - [metal3-docs](https://github.com/metal3-io/metal3-docs)
